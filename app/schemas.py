@@ -1,15 +1,19 @@
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
-# TOKEN
+"""
+    TOKEN
+"""
 class Token(BaseModel):
     access_token: str
     token_type: str
 
 
-# USER
+"""
+    USER
+"""
 class UserCreate(BaseModel):
     username: str
     email: EmailStr
@@ -28,7 +32,9 @@ class User(BaseModel):
         orm_mode = True
 
 
-# CLIENT
+"""
+    CLIENT
+"""
 class ClientBase(BaseModel):
     name: str
     email: EmailStr
@@ -56,7 +62,9 @@ class ClientUpdate(BaseModel):
     cpf: Optional[str] = None
 
 
-# PRODUCT
+"""
+    PRODUCT
+"""
 class ProductBase(BaseModel):
     description: Optional[str] = None
     sale_price: Optional[float] = None
@@ -83,7 +91,9 @@ class Product(ProductBase):
     class Config:
         orm_mode = True
 
-# ORDER ITEM
+"""
+    ORDER ITEM
+"""
 
 class OrderItemBase(BaseModel):
     product_id: int
@@ -102,65 +112,63 @@ class OrderItem(OrderItemBase):
     class Config:
         orm_mode = True
 
-# ORDER
-# class OrderBase(BaseModel):
-#     client_id: int
 
-# class OrderCreate(OrderBase):
-#     items: List[OrderItemCreate]
+"""
+    ORDER ITEM
+"""
+class OrderItemBase(BaseModel):
+    product_id: int
+    quantity: int = Field(..., gt=0)
 
-# class OrderUpdate(BaseModel):
-#     status: str
+class OrderItemCreate(OrderItemBase):
+    pass
 
-# class Order(OrderBase):
-#     id: int
-#     items: List[OrderItem] = []
-#     status: str
-#     subtotal: Optional[float]
-#     total: Optional[float]
+class OrderItemUpdate(BaseModel):
+    product_id: int
+    quantity: Optional[int] = Field(None, gt=0)
 
-#     class Config:
-#         orm_mode = True
-
-# ######
-# class OrderItemBase(BaseModel):
-#     product_id: int
-#     quantity: int
-
-# class OrderItemCreate(OrderItemBase):
-#     pass
-
-# class OrderItemUpdate(OrderItemBase):
-#     quantity: Optional[int]
-
-# class OrderItem(OrderItemBase):
-#     id: int
-#     subtotal: float
-
-#     class Config:
-#         orm_mode = True
-
-# class OrderBase(BaseModel):
-#     client_id: int
-
-# class OrderCreate(OrderBase):
-#     items: List[OrderItemCreate]
-
-# class OrderUpdate(BaseModel):
-#     status: str
-
-# class Order(OrderBase):
-#     id: int
-#     items: List[OrderItem] = []
-#     status: str
-#     subtotal: Optional[float]
-#     total: Optional[float]
-
-#     def calculate_subtotal(self):
-#         self.subtotal = sum(item.subtotal for item in self.items)
+class OrderItem(OrderItemBase):
+    id: int
+    order_id: int
+    product_id: int
+    quantity: int
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
+    total_price: float
     
-#     def calculate_total(self):
-#         self.total = self.subtotal  # Adicione lógica de cálculo de impostos, descontos, etc., se necessário
 
-#     class Config:
-#         orm_mode = True
+    class Config:
+        orm_mode = True
+
+"""
+    ORDERS
+"""
+class OrderBase(BaseModel):
+    client_id: int
+    status: str = Field(..., description="Status of the order")
+
+class OrderCreate(OrderBase):
+    items: List[OrderItemCreate]
+
+class OrderUpdate(BaseModel):
+    client_id: Optional[int] = None
+    status: Optional[str] = None
+    items: Optional[List[OrderItemUpdate]] = None
+
+class Order(OrderBase):
+    id: int
+    client_id: int
+    status: str
+    items: List[OrderItem] = []
+    total_order_price: float = Field(..., alias="total_order_price")
+
+    class Config:
+        orm_mode = True
+
+class OrderInDB(Order):
+    total_order_price: float
+    items: List[OrderItem]
+
+    class Config:
+        orm_mode = True
+

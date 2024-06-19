@@ -43,56 +43,56 @@ class Product(Base):
     order_items = relationship("OrderItem", back_populates="product")
     
 
+class Order(Base):
+    __tablename__ = "orders"
 
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id"))
+    status = Column(String)
+    total_order_price = Column(Numeric(10, 2), default=0.0)
+    subtotal = Column(Float, nullable=False, default=0.0)
+    created_at = Column(DateTime, nullable=True, default=datetime.utcnow)
+    client = relationship("Client", back_populates="orders")
+    items = relationship("OrderItem", back_populates="order")
 
-# class Order(Base):
-#     __tablename__ = "orders"
+    # calc total price order
+    def update_total_order_price(self):
+        total = sum(item.total_price for item in self.items)
+        self.total_order_price = total
 
-#     id = Column(Integer, primary_key=True, index=True)
-#     client_id = Column(Integer, ForeignKey("clients.id"))
-#     status = Column(String)
-#     total_order_price = Column(Numeric(10, 2), default=0.0)
-    
-#     client = relationship("Client", back_populates="orders")
-#     items = relationship("OrderItem", back_populates="order")
+    def as_dict(self):
+        return {
+            "id": self.id,
+            "client_id": self.client_id,
+            "status": self.status,
+            "total_order_price": float(self.total_order_price),
+            "items": [item.as_dict() for item in self.items]
+        }
 
-#     # calc total price order
-#     def update_total_order_price(self):
-#         total = sum(item.total_price for item in self.items)
-#         self.total_order_price = total
+class OrderItem(Base):
+    __tablename__ = "order_items"
 
-#     def as_dict(self):
-#         return {
-#             "id": self.id,
-#             "client_id": self.client_id,
-#             "status": self.status,
-#             "total_order_price": float(self.total_order_price),
-#             "items": [item.as_dict() for item in self.items]
-#         }
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"))
+    product_id = Column(Integer, ForeignKey("products.id"))
+    quantity = Column(Integer)
+    subtotal = Column(Integer)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-# class OrderItem(Base):
-#     __tablename__ = "order_items"
+    order = relationship("Order", back_populates="items")
+    product = relationship("Product")
 
-#     id = Column(Integer, primary_key=True, index=True)
-#     order_id = Column(Integer, ForeignKey("orders.id"))
-#     product_id = Column(Integer, ForeignKey("products.id"))
-#     quantity = Column(Integer)
-#     created_at = Column(DateTime, default=datetime.utcnow)
-#     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    @property
+    def total_price(self):
+        return self.quantity * self.product.sale_price
 
-#     order = relationship("Order", back_populates="items")
-#     product = relationship("Product")
-
-#     @property
-#     def total_price(self):
-#         return self.quantity * self.product.sale_value
-
-#     def as_dict(self):
-#         return {
-#             "id": self.id,
-#             "order_id": self.order_id,
-#             "product_id": self.product_id,
-#             "quantity": self.quantity,
-#             "total_price": self.total_price,
-#             "created_at": self.created_at,
-#         }
+    def as_dict(self):
+        return {
+            "id": self.id,
+            "order_id": self.order_id,
+            "product_id": self.product_id,
+            "quantity": self.quantity,
+            "total_price": self.total_price,
+            "created_at": self.created_at,
+        }
