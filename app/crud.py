@@ -95,8 +95,8 @@ def create_client(db: Session, client: schemas.ClientCreate, owner_id: int):
 
 
 # atualiza cliente
-def update_client(db: Session, client_id: int, client_update: schemas.ClientUpdate, owner_id: int):
-    db_client = db.query(models.Client).filter(models.Client.id == client_id, models.Client.owner_id == owner_id).first()
+def update_client(db: Session, client_id: int, client_update: schemas.ClientUpdate):
+    db_client = db.query(models.Client).filter(models.Client.id == client_id).first()
     if db_client:
         for key, value in client_update.dict(exclude_unset=True).items():
             setattr(db_client, key, value)
@@ -107,10 +107,203 @@ def update_client(db: Session, client_id: int, client_update: schemas.ClientUpda
 
 
 # deleta cliente
-def delete_client(db: Session, client_id: int, owner_id: int):
-    db_client = db.query(models.Client).filter(models.Client.id == client_id, models.Client.owner_id == owner_id).first()
+def delete_client(db: Session, client_id: int):
+    db_client = db.query(models.Client).filter(models.Client.id == client_id).first()
     if db_client:
         db.delete(db_client)
         db.commit()
         return True
     return False
+
+
+"""
+    PRODUCT
+"""
+
+def get_product(db: Session, product_id: int):
+    return db.query(models.Product).filter(models.Product.id == product_id).first()
+
+def get_products(db: Session, skip: int = 0, limit: int = 10, name: str = None, session: str = None, available: bool = None):
+    query = db.query(models.Product)
+    if name:
+        query = query.filter(models.Product.description.ilike(f"%{name}%"))
+    if session:
+        query = query.filter(models.Product.session.ilike(f"%{session}%"))
+    if available is not None:
+        query = query.filter(models.Product.available == available)
+    return query.offset(skip).limit(limit).all()
+
+def create_product(db: Session, product: schemas.ProductCreate):
+    db_product = models.Product(**product.dict())
+    db.add(db_product)
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+def update_product(db: Session, product_id: int, product: schemas.ProductUpdate):
+    db_product = get_product(db, product_id)
+    if db_product:
+        for key, value in product.dict(exclude_unset=True).items():
+            setattr(db_product, key, value)
+        db.commit()
+        db.refresh(db_product)
+    return db_product
+
+def delete_product(db: Session, product_id: int):
+    db_product = get_product(db, product_id)
+    if db_product:
+        db.delete(db_product)
+        db.commit()
+    return db_product
+
+# """
+#     ORDER
+# """
+
+# def create_order(db: Session, order: schemas.OrderCreate):
+#     db_order = models.Order(client_id=order.client_id)
+#     db.add(db_order)
+#     db.commit()
+#     db.refresh(db_order)
+#     for item in order.items:
+#         product = db.query(models.Product).filter(models.Product.id == item.product_id).first()
+#         if not product:
+#             raise ValueError(f"Product with id {item.product_id} not found")
+#         if product.stock < item.quantity:
+#             raise ValueError(f"Not enough stock available for product with id {item.product_id}")
+#         order_item = models.OrderItem(order_id=db_order.id, product_id=item.product_id, quantity=item.quantity, subtotal=item.quantity * product.price)
+#         db.add(order_item)
+#         db.commit()
+#         db.refresh(order_item)
+#     return db_order
+
+# def get_order(db: Session, order_id: int):
+#     return db.query(models.Order).filter(models.Order.id == order_id).first()
+
+# def get_orders(db: Session, skip: int = 0, limit: int = 10, period_start: Optional[str] = None, period_end: Optional[str] = None, section: Optional[str] = None, order_id: Optional[int] = None, status: Optional[str] = None, client_id: Optional[int] = None):
+#     query = db.query(models.Order)
+    
+#     if period_start and period_end:
+#         query = query.filter(models.Order.created_at.between(period_start, period_end))
+    
+#     if section:
+#         query = query.join(models.OrderItem).join(models.Product).filter(models.Product.section == section)
+    
+#     if order_id:
+#         query = query.filter(models.Order.id == order_id)
+    
+#     if status:
+#         query = query.filter(models.Order.status == status)
+    
+#     if client_id:
+#         query = query.filter(models.Order.client_id == client_id)
+    
+#     return query.offset(skip).limit(limit).all()
+
+# def update_order(db: Session, order_id: int, order_update: schemas.OrderUpdate):
+#     db_order = db.query(models.Order).filter(models.Order.id == order_id).first()
+#     if not db_order:
+#         return None
+#     db_order.status = order_update.status
+#     db.commit()
+#     db.refresh(db_order)
+#     return db_order
+
+# def delete_order(db: Session, order_id: int):
+#     db_order = db.query(models.Order).filter(models.Order.id == order_id).first()
+#     if not db_order:
+#         return False
+#     db.delete(db_order)
+#     db.commit()
+#     return True
+
+# def create_order_item(db: Session, order_item: schemas.OrderItemCreate, order_id: int):
+#     product = db.query(models.Product).filter(models.Product.id == order_item.product_id).first()
+#     if not product:
+#         raise ValueError(f"Product with id {order_item.product_id} not found")
+#     if product.stock < order_item.quantity:
+#         raise ValueError(f"Not enough stock available for product with id {order_item.product_id}")
+#     order_item_db = models.OrderItem(order_id=order_id, product_id=order_item.product_id, quantity=order_item.quantity, subtotal=order_item.quantity * product.price)
+#     db.add(order_item_db)
+#     db.commit()
+#     db.refresh(order_item_db)
+#     return order_item_db
+
+# def update_order_item(db: Session, order_item_id: int, quantity: int):
+#     order_item = db.query(models.OrderItem).filter(models.OrderItem.id == order_item_id).first()
+#     if not order_item:
+#         return None
+#     product = db.query(models.Product).filter(models.Product.id == order_item.product_id).first()
+#     if not product:
+#         raise ValueError(f"Product with id {order_item.product_id} not found")
+#     if product.stock < quantity:
+#         raise ValueError(f"Not enough stock available for product with id {order_item.product_id}")
+#     order_item.quantity = quantity
+#     order_item.subtotal = quantity * product.price
+#     db.commit()
+#     db.refresh(order_item)
+#     return order_item
+
+# def delete_order_item(db: Session, order_item_id: int):
+#     order_item = db.query(models.OrderItem).filter(models.OrderItem.id == order_item_id).first()
+#     if not order_item:
+#         return False
+#     db.delete(order_item)
+#     db.commit()
+#     return True
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# # def get_product(db: Session, product_id: int):
+# #     return db.query(models.Product).filter(models.Product.id == product_id).first()
+
+# # def get_products(db: Session, skip: int = 0, limit: int = 10, name: str = None, category: str = None, available: bool = None, owner_id: int = None):
+# #     query = db.query(models.Product)
+# #     if name:
+# #         query = query.filter(models.Product.description.ilike(f"%{name}%"))
+# #     if category:
+# #         query = query.filter(models.Product.category == category)
+# #     if available is not None:
+# #         query = query.filter(models.Product.available == available)
+# #     if owner_id is not None:
+# #         query = query.filter(models.Product.owner_id == owner_id)
+# #     return query.offset(skip).limit(limit).all()
+
+# # def create_product(db: Session, product: schemas.ProductCreate, user_id: int):
+# #     db_product = models.Product(**product.dict(), owner_id=user_id)
+# #     db.add(db_product)
+# #     db.commit()
+# #     db.refresh(db_product)
+# #     return db_product
+
+# # def update_product(db: Session, product_id: int, product: schemas.ProductUpdate):
+# #     db_product = get_product(db, product_id)
+# #     if db_product:
+# #         for key, value in product.dict(exclude_unset=True).items():
+# #             setattr(db_product, key, value)
+# #         db.commit()
+# #         db.refresh(db_product)
+# #     return db_product
+
+# # def delete_product(db: Session, product_id: int):
+# #     db_product = get_product(db, product_id)
+# #     if db_product:
+# #         db.delete(db_product)
+# #         db.commit()
+# #     return db_product

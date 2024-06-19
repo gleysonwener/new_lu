@@ -112,15 +112,15 @@ async def create_client_for_user(
 
 # lista clientes
 @app.get("/clients/", response_model=List[schemas.Client])
-async def read_clients_for_user(
+async def read_clients(
     skip: int = 0,
     limit: int = 10,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
     name: str = Query(None, description="Filtrar cliente pelo nome"),
     email: str = Query(None, description="Filtrar cliente pelo email"),
+    current_user: models.User = Depends(get_current_user)
 ):
-    query = db.query(models.Client).filter(models.Client.owner_id == current_user.id)
+    query = db.query(models.Client)
 
     if name:
         query = query.filter(models.Client.name.ilike(f"%{name}%"))
@@ -136,36 +136,175 @@ async def read_clients_for_user(
 # lista unico cliente
 @app.get("/clients/{client_id}", response_model=schemas.Client)
 async def get_client(client_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    client = crud.get_client_by_id(db, client_id, current_user.id)
+    client = db.query(models.Client).filter(models.Client.id == client_id).first()
     if not client:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found or not authorized")
-    return client   
-
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found")
+    return client
 
 # atualiza cliente
 @app.put("/clients/{client_id}", response_model=schemas.Client)
 def update_client(
     client_id: int, client_update: schemas.ClientUpdate, db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    
 ):
-    updated_client = crud.update_client(db, client_id, client_update, current_user.id)
+    updated_client = crud.update_client(db, client_id, client_update)
     if not updated_client:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found or not authorized")
     return updated_client
 
 
-# exclui cliente
+# exclui cliente - somente admin
 @app.delete("/clients/{client_id}", response_model=dict)
 async def delete_client(
-    client_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)
+    client_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)
 ):
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have permission to delete clients",
-        )
-    success = crud.delete_client(db, client_id, current_user.id)
+    success = crud.delete_client(db, client_id)
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found or not authorized")
     return {"message": "Client deleted successfully"}
 
+
+"""
+    PRODUCT
+"""
+# lista produtos
+@app.get("/products/", response_model=List[schemas.Product])
+async def read_products(
+    skip: int = 0, 
+    limit: int = 10,
+    description: str = Query(None, description="Filtrar produto pelo nome"),
+    session: str = Query(None, description="Filtrar produto pela sessão"),
+    available: bool = Query(None, description="Filtrar por disponibilidade"),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    query = db.query(models.Product)
+
+    if description:
+        query = query.filter(models.Product.description.ilike(f"%{description}%"))
+        
+    if session:
+        query = query.filter(models.Product.session.ilike(f"%{session}%"))
+    
+    if available is not None:
+        query = query.filter(models.Product.available == available)
+
+    products = query.offset(skip).limit(limit).all()
+    
+    return products
+
+# cria produtos
+@app.post("/products/", response_model=schemas.Product)
+def create_product(
+    product: schemas.ProductCreate, 
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(get_current_user)
+):
+    return crud.create_product(db=db, product=product)
+
+# lista um produto
+@app.get("/products/{id}", response_model=schemas.Product)
+def read_product(
+    id: int, 
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(get_current_user)
+):
+    db_product = crud.get_product(db, product_id=id)
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return db_product
+
+# atualiza produto
+@app.put("/products/{id}", response_model=schemas.Product)
+def update_product(
+    id: int, 
+    product: schemas.ProductUpdate, 
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(get_current_user)
+):
+    db_product = crud.get_product(db=db, product_id=id)
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return crud.update_product(db=db, product_id=id, product=product)
+
+# deleta um produto - somente admin
+@app.delete("/products/{id}")
+def delete_product(
+    id: int, 
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(get_current_active_user)
+):
+    db_product = crud.get_product(db=db, product_id=id)
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    crud.delete_product(db=db, product_id=id)
+    return {"detail": "Product deleted"}
+
+# """
+#     ORDER
+# """
+# # Rota para listar todos os pedidos com filtros
+# @app.get("/orders/", response_model=List[schemas.Order])
+# async def read_orders(
+#     skip: int = 0,
+#     limit: int = 10,
+#     period_start: Optional[str] = Query(None, description="Filter by start of period"),
+#     period_end: Optional[str] = Query(None, description="Filter by end of period"),
+#     section: Optional[str] = Query(None, description="Filter by section of products"),
+#     order_id: Optional[int] = Query(None, description="Filter by order ID"),
+#     status: Optional[str] = Query(None, description="Filter by order status"),
+#     client_id: Optional[int] = Query(None, description="Filter by client ID"),
+#     db: Session = Depends(get_db),
+#     current_user: models.User = Depends(get_current_user)
+# ):
+#     orders = crud.get_orders(db=db, skip=skip, limit=limit, period_start=period_start, period_end=period_end, section=section, order_id=order_id, status=status, client_id=client_id)
+#     return orders
+
+# # Rota para criar um novo pedido
+# @app.post("/orders/", response_model=schemas.Order)
+# async def create_order(
+#     order: schemas.OrderCreate,
+#     db: Session = Depends(get_db),
+#     current_user: models.User = Depends(get_current_user)
+# ):
+#     try:
+#         return crud.create_order(db=db, order=order)
+#     except ValueError as ve:
+#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+
+# # Rota para obter informações de um pedido específico
+# @app.get("/orders/{order_id}", response_model=schemas.Order)
+# async def read_order(
+#     order_id: int,
+#     db: Session = Depends(get_db),
+#     current_user: models.User = Depends(get_current_user)
+# ):
+#     order = crud.get_order(db=db, order_id=order_id)
+#     if not order:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+#     return order
+
+# # Rota para atualizar informações de um pedido específico
+# @app.put("/orders/{order_id}", response_model=schemas.Order)
+# async def update_order(
+#     order_id: int,
+#     order_update: schemas.OrderUpdate,
+#     db: Session = Depends(get_db),
+#     current_user: models.User = Depends(get_current_user)
+# ):
+#     updated_order = crud.update_order(db=db, order_id=order_id, order_update=order_update)
+#     if not updated_order:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+#     return updated_order
+
+# # Rota para excluir um pedido específico
+# @app.delete("/orders/{order_id}")
+# async def delete_order(
+#     order_id: int,
+#     db: Session = Depends(get_db),
+#     current_user: models.User = Depends(get_current_user)
+# ):
+#     success = crud.delete_order(db=db, order_id=order_id)
+#     if not success:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+#     return {"detail": "Order deleted successfully"}
