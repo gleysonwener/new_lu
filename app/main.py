@@ -319,6 +319,43 @@ async def delete_client(
 """
     SESSION PRODUCT
 
+    Create products - User be logged in
+
+    Example Request:
+    {
+        "description": "string",
+        "sale_price": 0,
+        "barcode": "string",
+        "session": "string",
+        "initial_stock": 0,
+        "expiration_date": "2024-06-19T19:43:38.264Z",
+        "images": "string",
+        "available": true
+    }
+        
+    Example Response:
+    {
+        "description": "string",
+        "sale_price": 0,
+        "barcode": "string",
+        "session": "string",
+        "initial_stock": 0,
+        "expiration_date": "2024-06-19T19:43:38.266Z",
+        "images": "string",
+        "available": true,
+        "id": 0
+    }
+"""
+@app.post("/products/", response_model=schemas.Product)
+def create_product(
+    product: schemas.ProductCreate, 
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(get_current_user)
+):
+    return crud.create_product(db=db, product=product)
+
+
+"""
     List all products - User be logged in
 
     - **skip**: Filter Number of results to skip (default: 0).
@@ -367,43 +404,6 @@ async def read_products(
     products = query.offset(skip).limit(limit).all()
     
     return products
-
-
-"""
-    Create products - User be logged in
-
-    Example Request:
-    {
-        "description": "string",
-        "sale_price": 0,
-        "barcode": "string",
-        "session": "string",
-        "initial_stock": 0,
-        "expiration_date": "2024-06-19T19:43:38.264Z",
-        "images": "string",
-        "available": true
-    }
-        
-    Example Response:
-    {
-        "description": "string",
-        "sale_price": 0,
-        "barcode": "string",
-        "session": "string",
-        "initial_stock": 0,
-        "expiration_date": "2024-06-19T19:43:38.266Z",
-        "images": "string",
-        "available": true,
-        "id": 0
-    }
-"""
-@app.post("/products/", response_model=schemas.Product)
-def create_product(
-    product: schemas.ProductCreate, 
-    db: Session = Depends(get_db), 
-    current_user: models.User = Depends(get_current_user)
-):
-    return crud.create_product(db=db, product=product)
 
 
 """

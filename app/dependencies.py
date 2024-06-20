@@ -5,9 +5,13 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from . import crud, models, schemas
 from .database import get_db
+import os
+from dotenv import load_dotenv
 
-SECRET_KEY = "secret-key"
-ALGORITHM = "HS256"
+load_dotenv()
+
+SECRET_KEY=os.getenv('SECRET_KEY')
+ALGORITHM=os.getenv('ALGORITHM')
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")

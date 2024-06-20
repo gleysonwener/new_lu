@@ -1,9 +1,15 @@
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
+# from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from databases import Database
+from dotenv import load_dotenv
+import os
 
-DATABASE_URL = "postgresql://user_db_loja:loja1234@localhost/loja_db"
+load_dotenv()
+
+
+DATABASE_URL=os.getenv('DATABASE_URL')
 
 database = Database(DATABASE_URL)
 engine = create_engine(DATABASE_URL)
