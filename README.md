@@ -11,10 +11,7 @@
   - [Gerenciamento de Clientes](#gerenciamento-de-clientes)
   - [Gerenciamento de Produtos](#gerenciamento-de-produtos)
   - [Gerenciamento de Pedidos](#gerenciamento-de-pedidos)
-- [Autenticação](#autenticação)
-- [Inicialização do Banco de Dados](#inicialização-do-banco-de-dados)
-- [Contribuição](#contribuição)
-- [Licença](#licença)
+- [Contribuição](#contribuições)
 
 ## Instalação
 
@@ -397,7 +394,7 @@
     }
     ```
 
-## Contribuições
+### Contribuições
 ## Sinta-se à vontade para contribuir para este projeto. Para maiores detalhes, envie um e-mail para: gleysonwener3@gmail.com.
 
 
@@ -420,10 +417,7 @@ This API ensures that the first user registered is an administrator, capable of 
   - [Client Management](#client-management)
   - [Product Management](#product-management)
   - [Order Management](#order-management)
-- [Authentication](#authentication)
-- [Database Initialization](#database-initialization)
-- [Contributing](#contributing)
-- [License](#license)
+- [Contributing](#contributions)
 
 ## Installation
 
